@@ -1,0 +1,84 @@
+import json
+import os
+import requests
+from pathlib import Path
+from tqdm import tqdm
+from PIL import Image
+from io import BytesIO
+
+#CONFIG--
+
+TRAIN_IN = "/home/justiny/Documents/ddl/training_data.jsonl"
+VAL_IN   = "/home/justiny/Documents/ddl/validation_data.jsonl"
+
+TRAIN_OUT = "training_ready.jsonl"
+VAL_OUT   = "validation_ready.jsonl"
+
+IMAGE_DIR = "images"
+Path(IMAGE_DIR).mkdir(exist_ok=True)
+
+
+#DOWNLOAD IMAGES FROM GOOGLE--
+def download_google_image(url):
+    try:
+        r = requests.get(url, timeout=10)
+        if r.status_code != 200:
+            print("HTTP error:", r.status_code, url)
+            return None
+
+        img = Image.open(BytesIO(r.content))
+
+        # Extract Google image token: /p/AF1QipXXXX
+        if "/p/" in url:
+            token = url.split("/p/")[1].split("=")[0]
+        else:
+            token = url.split("/")[-1].split("=")[0]
+
+        filename = f"{token}.jpg"
+        filepath = os.path.join(IMAGE_DIR, filename)
+
+        img.save(filepath)
+        return filepath
+    except Exception as e:
+        print("Error downloading:", url, e)
+        return None
+
+
+#JSONL FILE PROCESSING--
+def process_file(input_path, output_path):
+    out_lines = []
+
+    with open(input_path, "r") as f:
+        lines = f.readlines()
+
+    for line in tqdm(lines):
+        ex = json.loads(line)
+
+        # Traverse all messages and download image URLs
+        for msg in ex["messages"]:
+            for c in msg["content"]:
+                if c.get("type") == "image":
+                    url = c["image"]
+                    local_path = download_google_image(url)
+
+                    if local_path is None:
+                        print("Skipping image:", url)
+                        continue
+
+                    # Replace URL with local image path
+                    c["image"] = local_path
+
+        out_lines.append(json.dumps(ex))
+
+    with open(output_path, "w") as f:
+        for l in out_lines:
+            f.write(l + "\n")
+
+    print(f"Saved: {output_path}")
+
+
+#RUN--
+process_file(TRAIN_IN, TRAIN_OUT)
+process_file(VAL_IN, VAL_OUT)
+
+print("✓ All images downloaded and JSONL")
