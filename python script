@@ -8,8 +8,8 @@ from io import BytesIO
 
 #CONFIG--
 
-TRAIN_IN = "/home/justiny/Documents/ddl/training_data.jsonl"
-VAL_IN   = "/home/justiny/Documents/ddl/validation_data.jsonl"
+TRAIN_IN = "/pscratch/sd/j/justiny/DDL-project/training_data.jsonl"
+VAL_IN   = "/pscratch/sd/j/justiny/DDL-project/validation_data.jsonl"
 
 TRAIN_OUT = "training_ready.jsonl"
 VAL_OUT   = "validation_ready.jsonl"
